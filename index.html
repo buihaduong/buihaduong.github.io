@@ -47,7 +47,8 @@
 
     function initialize() {
         directionsDisplay = new google.maps.DirectionsRenderer({
-            suppressMarkers: true
+            suppressMarkers: true,
+            preserveViewport: true
         });
         var hue = new google.maps.LatLng(16.4534777, 107.5769233);
         var mapOptions = {
@@ -74,7 +75,10 @@
         });
 
         google.maps.event.addListener(car, 'click', function() {
-            start_car();
+            if (car_status)
+                stop_car();
+            else
+                start_car();
         });
     }
     google.maps.event.addDomListener(window, 'load', initialize);
@@ -94,6 +98,12 @@
         // pos = pos + 1;
         // // console.log('moving' + pos);
         // setTimeout("move_car(" + pos + ")", tick);
+        if (!car_status)
+            return;
+
+        car.setPosition(points[car_pos].point);
+        car_pos = (car_pos + 1) % points.length;
+
         console.log('moving_car');
     }
 
@@ -105,13 +115,12 @@
         // setTimeout("move_car(0)", tick);
     }
 
-    function reset_car()
-    {
+    function reset_car() {
         points = getPointOnRoute(route);
         car_pos = 0;
     }
 
-    function stop_car(){
+    function stop_car() {
         car_status = 0;
     }
 
@@ -138,10 +147,10 @@
             }
         }
 
-        if (waypts.length <= 0) {
-            directionsDisplay.setMap(null);
-            return;
-        }
+        // if (waypts.length <= 0) {
+        //     directionsDisplay.setMap(null);
+        //     return;
+        // }
 
         directionsDisplay.setMap(map);
 
@@ -157,6 +166,11 @@
             if (status == google.maps.DirectionsStatus.OK) {
                 directionsDisplay.setDirections(response);
                 route = response;
+
+                var current_car_status = car_status;
+                stop_car();
+                reset_car();
+                car_status = current_car_status;
             }
         });
     }
@@ -193,7 +207,10 @@
             for (j = 0; j < steps.length; j++) {
                 var nextSegment = steps[j].path;
                 for (k = 0; k < nextSegment.length; k++) {
-                    var data;
+                    var data = {
+                        point: null,
+                        isEndPoint: null
+                    };
                     data.point = nextSegment[k];
                     data.isEndPoint = false;
                     if (k == nextSegment.length - 1)
